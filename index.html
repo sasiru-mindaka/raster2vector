@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Private, browser-based raster to vector conversion with smooth curves and pixel-exact export.">
+  <title>Vector Studio — Raster to SVG</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script type="module" src="assets/js/app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Vector Studio home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5 24 13 6l5 12 4-7 5 13H5Z"/><circle cx="13" cy="6" r="2"/><circle cx="22" cy="11" r="2"/></svg></span>
+        <span><strong>Vector Studio</strong><small>RASTER → SVG WORKSPACE</small></span>
+      </a>
+      <div class="topbar-actions">
+        <span class="privacy-note"><span class="privacy-dot"></span> Processing stays on your device</span>
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">
+          <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.8 8.8 0 1 0 20.5 15.5Z"/></svg>
+          <span id="themeLabel">Dark mode</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero-row">
+        <div>
+          <div class="eyebrow">HYBRID VECTORIZATION ENGINE</div>
+          <h1>From pixels to <span>paths + detail.</span></h1>
+          <p class="hero-copy">Turn clean regions into editable SVG paths and preserve texture-heavy regions with a masked raster layer. Quality first, processed in your browser.</p>
+        </div>
+        <div class="hero-chip"><span class="chip-orb"></span> Built-in curve engine (no CDN)</div>
+      </section>
+
+      <div class="workspace-grid">
+        <aside class="control-panel panel">
+          <div class="panel-heading">
+            <div><div class="panel-kicker">WORKSPACE</div><h2>Trace settings</h2></div>
+            <span class="step-pill">QUALITY FIRST</span>
+          </div>
+
+          <label class="drop-zone" id="dropZone" for="fileInput" tabindex="0">
+            <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif">
+            <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></span>
+            <strong>Drop an image here</strong>
+            <span class="drop-sub">or <span class="browse-link">browse files</span></span>
+            <span class="file-meta">PNG, JPG, WEBP, GIF, BMP, AVIF · up to 25 MB / 12 MP</span>
+          </label>
+
+          <div class="loaded-file" id="loadedFile" hidden>
+            <span class="file-thumb" id="fileThumb">IMG</span>
+            <span class="file-description"><strong id="fileName">No image selected</strong><small id="fileDimensions">—</small></span>
+            <button type="button" class="icon-button" id="removeFile" aria-label="Remove image">×</button>
+          </div>
+
+          <div class="divider"></div>
+          <div class="section-head"><span>Output mode</span><span class="live-tag">CHOOSE ONE</span></div>
+          <div class="mode-options" role="radiogroup" aria-label="Vectorization mode">
+            <label class="mode-card selected" id="hybridModeCard">
+              <input type="radio" name="mode" value="hybrid" checked>
+              <span class="mode-icon smooth-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 18c4-11 7-11 10-5s5 5 8-7"/><circle cx="3" cy="18" r="1.5"/><circle cx="21" cy="6" r="1.5"/></svg></span>
+              <span class="mode-copy"><strong>Hybrid Vector</strong><small>Editable paths + masked detail</small></span>
+              <span class="recommended">RECOMMENDED</span>
+            </label>
+            <label class="mode-card" id="exactModeCard">
+              <input type="radio" name="mode" value="exact">
+              <span class="mode-icon exact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></span>
+              <span class="mode-copy"><strong>Pixel-Exact</strong><small>Exact decoded pixels · larger SVG</small></span>
+            </label>
+          </div>
+          <p class="field-hint" id="modeHint">Clean, stable regions become coloured SVG paths. Texture-heavy areas remain as a transparency-masked PNG layer inside the same SVG.</p>
+
+          <div class="divider"></div>
+          <div class="section-head"><span>Shape & colour</span><span class="section-index">02</span></div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="presetSelect">Artwork profile</label></div>
+            <select id="presetSelect" class="select-control">
+              <option value="auto">Auto / General artwork</option>
+              <option value="photo">Photograph / Gradient</option>
+              <option value="illustration">Illustration</option>
+              <option value="poster">Poster</option>
+              <option value="logo">Logo / Flat artwork</option>
+            </select>
+            <p class="field-hint">The profile changes how aggressively textured, photographic or flat regions are assigned to raster fallback.</p>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="colorCount">Colour detail</label><output id="colorCountValue">48 colours</output></div>
+            <input id="colorCount" type="range" min="8" max="512" step="8" value="256">
+            <div class="range-ends"><span>Fewer / lighter</span><span>More / richer</span></div>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="curveSmoothness">Curve smoothing</label><output id="curveSmoothnessValue">1.2 px</output></div>
+            <input id="curveSmoothness" type="range" min="0" max="3" step="0.1" value="1">
+            <div class="range-ends"><span>Keep detail</span><span>Smoother edges</span></div>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="speckleSize">Speckle cleanup</label><output id="speckleSizeValue">2 px</output></div>
+            <input id="speckleSize" type="range" min="0" max="16" step="1" value="0">
+            <div class="range-ends"><span>Keep texture</span><span>Remove noise</span></div>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="detailProtection">Fidelity target</label><output id="detailProtectionValue">90%</output></div>
+            <input id="detailProtection" type="range" min="0" max="100" step="5" value="90">
+            <div class="range-ends"><span>More vector</span><span>Keep more texture</span></div>
+            <p class="field-hint">Higher values send more complex areas to the masked raster layer rather than simplifying them into paths.</p>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="minVectorArea">Minimum vector region</label><output id="minVectorAreaValue">256 px²</output></div>
+            <input id="minVectorArea" type="range" min="1" max="2048" step="1" value="48">
+            <div class="range-ends"><span>Keep small shapes</span><span>Move tiny shapes to raster</span></div>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="edgeOverlap">Seam protection</label><output id="edgeOverlapValue">2 px</output></div>
+            <input id="edgeOverlap" type="range" min="0" max="8" step="1" value="2">
+            <div class="range-ends"><span>Exact boundary</span><span>More underlay overlap</span></div>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="maxDimension">Working resolution</label><output id="maxDimensionValue">6000 px</output></div>
+            <input id="maxDimension" type="range" min="1000" max="6000" step="200" value="6000">
+            <div class="range-ends"><span>Lower detail</span><span>Preserve more pixels</span></div>
+            <p class="field-hint">This caps the longest working-image side. Higher values retain more source detail but need more memory and processing time.</p>
+          </div>
+
+          <div class="note-card" id="exactNote" hidden>
+            <span class="note-symbol">i</span>
+            <p>Pixel-Exact mode preserves decoded 8-bit sRGB pixels. Curves cannot be smoothed without changing the original pixel geometry.</p>
+          </div>
+
+          <button id="traceButton" class="primary-button" type="button" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17c4-10 7-10 10-4s5 5 6-6"/><path d="M17 7h3v3"/></svg>
+            <span>Generate hybrid SVG</span>
+          </button>
+          <button id="cancelButton" class="download-button cancel-button" type="button" hidden>Cancel conversion</button>
+          <button id="downloadButton" class="download-button" type="button" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3h16v-3"/></svg>
+            Download SVG
+          </button>
+          <p class="local-note"><span class="lock-icon">▣</span> Your image is processed locally. It is never uploaded.</p>
+        </aside>
+
+        <section class="preview-area" aria-label="Image preview and vector output">
+          <div class="preview-toolbar">
+            <div><div class="panel-kicker">LIVE WORKSPACE</div><h2>Preview & export</h2></div>
+            <div class="preview-actions">
+              <span class="format-pill">SVG <span>·</span> HYBRID</span>
+            </div>
+          </div>
+
+          <div class="preview-grid">
+            <article class="preview-card panel">
+              <div class="preview-card-head"><div><span class="preview-label">01</span><h3>Original image</h3></div><span class="preview-badge" id="sourceBadge">Waiting for image</span></div>
+              <div class="preview-stage checkerboard" id="sourceStage">
+                <div class="empty-state" id="sourceEmpty"><span class="empty-art">▧</span><strong>Your source image</strong><small>Upload a raster image to begin</small></div>
+                <img id="sourcePreview" alt="Original uploaded image" hidden>
+              </div>
+              <div class="preview-card-foot"><span id="sourceInfo">No image loaded</span><span class="foot-state">SOURCE</span></div>
+            </article>
+
+            <article class="preview-card panel result-card">
+              <div class="preview-card-head"><div><span class="preview-label">02</span><h3>Hybrid result</h3></div><span class="preview-badge result-badge" id="resultBadge">Not generated</span></div>
+              <div class="preview-stage checkerboard" id="resultStage">
+                <div class="empty-state" id="resultEmpty"><span class="empty-art vector-empty">⌁</span><strong>Hybrid SVG preview appears here</strong><small>Vector paths and masked raster detail will be combined</small></div>
+                <img id="resultPreview" alt="Generated SVG vector preview" hidden>
+              </div>
+              <div class="preview-card-foot"><span id="resultInfo">No vector output yet</span><span class="foot-state">VECTOR</span></div>
+            </article>
+          </div>
+
+          <div class="result-summary panel" id="resultSummary">
+            <div class="summary-status" role="status" aria-live="polite"><span class="status-indicator" id="statusIndicator"></span><div><strong id="statusTitle">Ready when you are</strong><small id="statusMessage">Upload an image, then generate your first SVG.</small></div></div>
+            <div class="summary-metrics">
+              <div class="metric"><span>Vector paths</span><strong id="metricPaths">—</strong></div>
+              <div class="metric"><span>Colours</span><strong id="metricColors">—</strong></div>
+              <div class="metric"><span>Vector area</span><strong id="metricVector">—</strong></div>
+              <div class="metric"><span>Raster fallback</span><strong id="metricRaster">—</strong></div>
+              <div class="metric"><span>SVG size</span><strong id="metricSize">—</strong></div>
+              <div class="metric"><span>Time</span><strong id="metricTime">—</strong></div>
+            </div>
+            <div class="progress-track" aria-hidden="true"><span id="traceProgress"></span></div>
+          </div>
+
+          <div class="quality-note"><span class="quality-icon">✦</span><p><strong>Hybrid means both:</strong> vector-friendly shapes become editable coloured paths. Photographic texture, hair, foliage and intricate gradients are kept in an alpha-masked PNG fallback. A photograph may therefore have a high raster percentage; this is honest preservation, not a claim that every pixel became a vector.</p></div>
+        </section>
+      </div>
+    </main>
+    <footer class="app-footer"><span>VECTOR STUDIO</span><span>Private by design · Browser-based processing</span></footer>
+  </div>
+</body>
+</html>

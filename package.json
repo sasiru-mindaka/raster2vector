@@ -1,0 +1,11 @@
+{
+  "name": "vector-studio-hybrid",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-only hybrid raster-to-vector SVG studio built with HTML, CSS and vanilla JavaScript",
+  "scripts": {
+    "test": "node tests/run-tests.mjs",
+    "serve": "python3 -m http.server 8000"
+  }
+}
