@@ -27,3 +27,4 @@ A photograph cannot be both mostly-vector and pixel-identical: raising fidelity 
 Region boundaries are now marching-squares contours over per-pixel *coverage* (anti-aliased edge pixels contribute their blend fraction), so edges land at sub-pixel positions instead of pixel staircases. Default Fidelity target is 90%.
 Measured (Chromium e2e, default settings): user banner 1080² 33.2 dB / vec 42%; Sinhala crops 37.7–38.9 dB; logo 44.9 dB; photo 42.4 dB. The earlier hybrid SVG from the user's own run scored 25.65 dB on the same banner.
 Known remaining artefact: very faint 1-px contour lines inside smooth blurred gradients where a vector patch meets raster (raise Fidelity target to shrink them, at the cost of vector %).
+Test commit for Claude
