@@ -1,18 +1,20 @@
-# Image-quality and browser regression tests
+# Raster2Vector image and browser tests
 
-The tests use local images and do not upload source files.
+These optional quality tests use local sample images. They do not upload source images.
+
+> **Python is for testing only.** The Raster2Vector website, conversion engine and SVG export do not use Python. Python is required only by the Python-based test scripts in this folder.
 
 ## Chromium GPU/UI smoke test
 
 Install the Python test packages and Playwright's Chromium build, then run:
 
 ```bash
-python3 -m pip install -r requirements-test.txt
+python3 -m pip install "playwright>=1.48" "Pillow>=10.0" "numpy>=1.26" "scikit-image>=0.23" "CairoSVG>=2.7"
 python3 -m playwright install chromium
 npm run test:e2e
 ```
 
-The script also detects a system Chromium executable. It tests Auto, WebGPU-preferred, WebGL2-preferred and CPU-only Hybrid Vector paths against the local image fixtures. It checks Pure Vector Photo output on the astronaut, coffee and cat images, including the requirement that no `<image>` or `data:image` raster resource is embedded. A requested GPU backend may report a CPU fallback when the host does not expose the API; the test reports the backend actually used. A managed Chromium policy that blocks navigation to local pages prevents this suite from running.
+The script also detects a system Chromium executable. It tests Auto, WebGPU-preferred, WebGL2-preferred and CPU-only Hybrid Vector paths against local image fixtures. It checks Pure Vector Photo output on the astronaut, coffee and cat images, including the requirement that no `<image>` or `data:image` raster resource is embedded. A requested GPU backend may report a CPU fallback when the host does not expose the API; the test reports the backend actually used. A managed Chromium policy that blocks navigation to local pages prevents this suite from running.
 
 For a software-only compatibility run, prefix the command with `VECTOR_STUDIO_SWIFTSHADER=1`. This is not a hardware performance test.
 

@@ -1,5 +1,0 @@
-playwright>=1.48
-Pillow>=10.0
-numpy>=1.26
-scikit-image>=0.23
-CairoSVG>=2.7

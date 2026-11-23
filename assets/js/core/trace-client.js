@@ -14,7 +14,7 @@ function getWorker() {
   try {
     currentWorker = new Worker(new URL('../workers/trace-worker.js', import.meta.url), {
       type: 'module',
-      name: 'vector-studio-tracer'
+      name: 'raster2vector-tracer'
     });
   } catch (error) {
     throw new Error(`Could not start the background tracing worker. Open this project through a local web server (see README). ${error.message}`);

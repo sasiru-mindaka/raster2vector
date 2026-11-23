@@ -77,7 +77,7 @@ def main() -> int:
     inkscape = shutil.which("inkscape")
     renderer_name = "Inkscape" if inkscape else "CairoSVG"
 
-    with tempfile.TemporaryDirectory(prefix="vector-studio-pure-vector-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="raster2vector-pure-vector-") as temporary:
         temp = Path(temporary)
         manifest = []
         originals: dict[str, np.ndarray] = {}

@@ -19,7 +19,7 @@ IMAGES = ["astronaut.png", "coffee.png", "chelsea.png", "rocket.png", "flat-grap
 
 
 def main() -> int:
-    with tempfile.TemporaryDirectory(prefix="vector-studio-real-images-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="raster2vector-real-images-") as temporary:
         temp = Path(temporary)
         manifest = []
         originals: dict[str, np.ndarray] = {}

@@ -1,19 +1,20 @@
 {
-  "name": "vector-studio-hybrid",
-  "version": "3.3.0",
+  "name": "raster2vector",
+  "version": "7.3.0",
   "private": true,
   "type": "module",
-  "description": "Browser-only hybrid and pure-vector photo reconstruction studio with WebGPU, WebGL2 and CPU fallback",
+  "description": "Browser-based image to SVG converter with Pure Vector, Hybrid and Pixel-Exact modes",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node tests/run-tests.mjs && node tests/worker-photo-smoke.mjs && node tests/ui-mode-regression.mjs && node tests/pure-vector-gap-regression.mjs && node tests/runtime-import-audit.mjs",
     "test:e2e": "python3 tests/e2e/gpu-smoke.py",
     "test:photo": "python3 tests/e2e/pure-vector-regression.py",
-    "serve": "python3 -m http.server 8000 --bind 127.0.0.1",
+    "serve": "node serve.mjs",
     "test:hybrid": "python3 tests/e2e/real-image-regression.py"
   },
   "devDependencies": {
     "typescript": "^5.8.3"
-  }
+  },
+  "license": "MIT"
 }

@@ -5,7 +5,7 @@ export function initializeTheme() {
 
   let theme = 'light';
   try {
-    const saved = localStorage.getItem('vector-studio-theme');
+    const saved = localStorage.getItem('raster2vector-theme');
     if (saved === 'light' || saved === 'dark') theme = saved;
     else if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) theme = 'dark';
   } catch { /* Storage may be disabled; the toggle still works for this session. */ }
@@ -17,7 +17,7 @@ export function initializeTheme() {
     button.setAttribute('aria-pressed', String(isDark));
     button.setAttribute('aria-label', `Switch to ${isDark ? 'light' : 'dark'} mode`);
     label.textContent = `${isDark ? 'Light' : 'Dark'} mode`;
-    try { localStorage.setItem('vector-studio-theme', theme); } catch { /* Ignore unavailable storage. */ }
+    try { localStorage.setItem('raster2vector-theme', theme); } catch { /* Ignore unavailable storage. */ }
   };
 
   button.addEventListener('click', () => apply(theme === 'dark' ? 'light' : 'dark'));

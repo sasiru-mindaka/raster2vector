@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
-printf 'Vector Studio local server: http://localhost:8000\nPress Ctrl+C to stop.\n'
-python3 -m http.server 8000 --bind 127.0.0.1
+if ! command -v node >/dev/null 2>&1; then
+  echo "Node.js is required to start the local preview server."
+  exit 1
+fi
+npm run serve
