@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildLosslessSvg, ComplexityLimitError, MAX_LOSSLESS_REGIONS } from '../assets/js/core/lossless.js';
 import { inspectSvg, formatBytes, hasUnsafeSvgAttributeValue, isAllowedSvgAttribute } from '../assets/js/core/svg-utils.js';
-import { buildColourPreservingSvg, hasMultipleOpaqueRgbColours } from '../assets/js/core/vtrace-adapter.js';
-import { analyseAndSegment, createMaskedVectorImageData } from '../assets/js/core/hybrid-analysis.js';
 import { composeHybridSvg } from '../assets/js/core/hybrid-composer.js';
 import { prepareHybridPalette, resolveHybridProfile, traceHybridPure } from '../assets/js/core/engine.js';
 import { sanitizeTraceSettings, validateWorkerPayload } from '../assets/js/generated/security/validation.js';
@@ -10,6 +8,16 @@ import { classifyPaletteOnGpu } from '../assets/js/generated/gpu/accelerator.js'
 
 function imageData(width, height, pixels) {
   return { width, height, data: new Uint8ClampedArray(pixels) };
+}
+
+function rgbaFixture(width, height, pixelAt) {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      data.set(pixelAt(x, y), (y * width + x) * 4);
+    }
+  }
+  return { width, height, data };
 }
 
 const tests = [];
@@ -110,39 +118,15 @@ test('SVG parser rejects active content', () => {
   assert.throws(() => inspectSvg('<?xml-stylesheet href="evil.css"?><svg/>'), /active content|valid SVG/i);
 });
 
-test('colour adapter ignores VTrace getSVG monochrome wrapper and preserves raw per-region fills', () => {
-  const rawSvg = '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" width="2" height="1" viewBox="0 0 2 1"><path fill="#ef0000" d="M0 0h1v1z"/><path fill="#00c800" d="M1 0h1v1z"/></svg>';
-  const tracer = { _pathData: rawSvg, getSVG() { return '<svg><path fill="black" d="M0 0h2v1z"/></svg>'; } };
-  const source = imageData(2, 1, [255, 0, 0, 255, 0, 200, 0, 255]);
-  const result = buildColourPreservingSvg(tracer, 2, 1, source);
-  assert.match(result.svg, /fill="#ef0000"/);
-  assert.match(result.svg, /fill="#00c800"/);
-  assert.doesNotMatch(result.svg, /fill="black"/);
-  assert.equal(result.colorCount, 2);
-  assert.equal(result.pathCount, 2);
-});
-
-test('colour adapter rejects monochrome output for multicolour source', () => {
-  const tracer = { _pathData: '<svg xmlns="http://www.w3.org/2000/svg"><path fill="#000000" d="M0 0z"/></svg>', getSVG() { return ''; } };
-  const source = imageData(2, 1, [255, 0, 0, 255, 0, 0, 255, 255]);
-  assert.throws(() => buildColourPreservingSvg(tracer, 2, 1, source), /collapsed a multi-colour image/);
-});
-
-test('colour detection ignores fully transparent pixels', () => {
-  assert.equal(hasMultipleOpaqueRgbColours(imageData(2, 1, [255, 0, 0, 255, 0, 255, 0, 0])), false);
-  assert.equal(hasMultipleOpaqueRgbColours(imageData(2, 1, [255, 0, 0, 255, 0, 255, 0, 255])), true);
-});
-
-test('colour adapter rejects missing raw VTracer SVG output', () => {
-  const tracer = { _pathData: undefined, getSVG() { return '<svg><path fill="black"/></svg>'; } };
-  assert.throws(() => buildColourPreservingSvg(tracer, 1, 1), /did not expose its raw colour SVG/);
-});
-
-test('browser SVG validator allows exact root namespaces but rejects unsafe attribute URLs', () => {
-  const root = { localName: 'svg' };
-  assert.equal(hasUnsafeSvgAttributeValue(root, { name: 'xmlns', value: 'http://www.w3.org/2000/svg' }, root), false);
-  assert.equal(hasUnsafeSvgAttributeValue(root, { name: 'xmlns:xlink', value: 'http://www.w3.org/1999/xlink' }, root), false);
-  assert.equal(hasUnsafeSvgAttributeValue(root, { name: 'xmlns', value: 'https://evil.example/ns' }, root), true);
+test('browser SVG validator trusts only exact root XML namespace declarations', () => {
+  const root = { localName: 'svg', namespaceURI: 'http://www.w3.org/2000/svg' };
+  const xmlns = { name: 'xmlns', localName: 'xmlns', value: 'http://www.w3.org/2000/svg', namespaceURI: 'http://www.w3.org/2000/xmlns/' };
+  const xlink = { name: 'xmlns:xlink', prefix: 'xmlns', localName: 'xlink', value: 'http://www.w3.org/1999/xlink', namespaceURI: 'http://www.w3.org/2000/xmlns/' };
+  assert.equal(hasUnsafeSvgAttributeValue(root, xmlns, root), false);
+  assert.equal(hasUnsafeSvgAttributeValue(root, xlink, root), false);
+  assert.equal(hasUnsafeSvgAttributeValue(root, { ...xmlns, value: 'https://evil.example/ns' }, root), true);
+  assert.equal(hasUnsafeSvgAttributeValue(root, { ...xlink, value: 'https://evil.example/ns' }, root), true);
+  assert.equal(hasUnsafeSvgAttributeValue({ localName: 'path' }, xmlns, root), true);
   assert.equal(hasUnsafeSvgAttributeValue({ localName: 'path' }, { name: 'fill', value: 'url(https://evil.example/x)' }, root), true);
   assert.equal(hasUnsafeSvgAttributeValue({ localName: 'path' }, { name: 'href', value: 'javascript:alert(1)' }, root), true);
   assert.equal(hasUnsafeSvgAttributeValue({ localName: 'path' }, { name: 'fill', value: '#ffcc00' }, root), false);
@@ -267,54 +251,6 @@ test('GPU Sobel mask protects edge pixels from vector simplification', () => {
   assert.equal(protectedEdges.gpuBackend, 'webgl2');
 });
 
-// Hybrid segmentation and composition prerequisites.
-
-function rgbaFixture(width, height, pixelAt) {
-  const data = new Uint8ClampedArray(width * height * 4);
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-    const i = (y * width + x) * 4;
-    data.set(pixelAt(x, y), i);
-  }
-  return { width, height, data };
-}
-
-test('hybrid analyser classifies large clean flat colour regions as vector-friendly', () => {
-  const fixture = rgbaFixture(64, 32, (x) => x < 32 ? [240, 20, 30, 255] : [20, 80, 240, 255]);
-  const result = analyseAndSegment(fixture, { profile: 'logo', analysisTileSize: 8, detailProtection: 35, edgeOverlap: 0, minVectorArea: 0 });
-  assert.equal(result.vectorPercent, 100);
-  assert.equal(result.rasterPercent, 0);
-  assert.equal(result.vectorMask.length, 64 * 32);
-});
-
-test('hybrid analyser sends a high-frequency noisy patch to raster fallback', () => {
-  let seed = 123456;
-  const random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed & 255; };
-  const fixture = rgbaFixture(64, 32, (x, y) => {
-    if (x < 32) return [240, 30, 20, 255];
-    return [random(), random(), random(), 255];
-  });
-  const result = analyseAndSegment(fixture, { profile: 'photo', analysisTileSize: 8, detailProtection: 80, edgeOverlap: 0, minVectorArea: 0 });
-  assert.ok(result.rasterPercent > 40, `expected raster fallback > 40%, got ${result.rasterPercent}`);
-  assert.ok(result.vectorPercent < 60);
-});
-
-test('hybrid raster underlay dilates around fallback regions without changing vector mask', () => {
-  const fixture = rgbaFixture(24, 24, (x, y) => x >= 8 && x < 16 && y >= 8 && y < 16 ? [randomNoise(x, y), 90, 90, 255] : [230, 230, 230, 255]);
-  const withoutOverlap = analyseAndSegment(fixture, { profile: 'photo', analysisTileSize: 8, detailProtection: 100, edgeOverlap: 0, minVectorArea: 0 });
-  const withOverlap = analyseAndSegment(fixture, { profile: 'photo', analysisTileSize: 8, detailProtection: 100, edgeOverlap: 2, minVectorArea: 0 });
-  assert.deepEqual(withOverlap.vectorMask, withoutOverlap.vectorMask);
-  assert.ok(withOverlap.rasterUnderlayPixels >= withoutOverlap.rasterUnderlayPixels);
-});
-
-function randomNoise(x, y) { return (x * 73 + y * 137 + x * y * 11) % 256; }
-
-test('vector-only image data makes all fallback pixels transparent while retaining exact vector RGBA', () => {
-  const fixture = rgbaFixture(2, 1, (x) => x === 0 ? [12, 34, 56, 255] : [210, 180, 90, 190]);
-  const masked = createMaskedVectorImageData(fixture, new Uint8Array([1, 0]));
-  assert.deepEqual([...masked.data], [12, 34, 56, 255, 0, 0, 0, 0]);
-});
-
-
 test('hybrid composer creates one SVG containing masked PNG fallback and coloured vector paths', async () => {
   const previousCanvas = globalThis.OffscreenCanvas;
   const previousImageData = globalThis.ImageData;
@@ -338,6 +274,18 @@ test('hybrid composer creates one SVG containing masked PNG fallback and coloure
     assert.equal(stats.colorCount, 1);
     assert.match(result.svg, /<image[^>]+href="data:image\/png;base64,/);
     assert.match(result.svg, /<path fill="#ff0000"/);
+    assert.doesNotMatch(result.svg, /xmlns:xlink=/, 'Hybrid SVG does not declare the unused XLink namespace');
+    const root = { localName: 'svg', namespaceURI: 'http://www.w3.org/2000/svg' };
+    const tags = [...result.svg.matchAll(/<([A-Za-z][\w:-]*)\b([^>]*)>/g)];
+    for (let index = 0; index < tags.length; index += 1) {
+      const [, tag, sourceAttributes] = tags[index];
+      const element = index === 0 ? root : { localName: tag, namespaceURI: 'http://www.w3.org/2000/svg' };
+      for (const match of sourceAttributes.matchAll(/([\w:-]+)\s*=\s*(["'])(.*?)\2/g)) {
+        const [, name, , value] = match;
+        assert.equal(isAllowedSvgAttribute(tag, name), true, `unsupported generated attribute ${tag}.${name}`);
+        assert.equal(hasUnsafeSvgAttributeValue(element, { name, value }, root), false, `unsafe generated attribute ${tag}.${name}`);
+      }
+    }
     assert.equal(result.vectorPercent, 50);
   } finally {
     if (previousCanvas === undefined) delete globalThis.OffscreenCanvas; else globalThis.OffscreenCanvas = previousCanvas;

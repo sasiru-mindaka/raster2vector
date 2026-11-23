@@ -112,12 +112,18 @@ def main() -> int:
             rendered_path = temp / f"{item['image']}-rendered.png"
             width, height = map(int, item["dimensions"].split("x"))
             render_seconds = render_svg(svg_path, rendered_path, width, height)
-            candidate = np.asarray(Image.open(rendered_path).convert("RGB"), dtype=np.uint8)
+            rendered = Image.open(rendered_path).convert("RGBA")
+            candidate = np.asarray(rendered.convert("RGB"), dtype=np.uint8)
+            source_rgba = Image.open(FIXTURES / f"{item['image']}.png").convert("RGBA")
+            source_is_opaque = bool(np.all(np.asarray(source_rgba.getchannel("A"), dtype=np.uint8) == 255))
+            rendered_is_opaque = bool(np.all(np.asarray(rendered.getchannel("A"), dtype=np.uint8) == 255))
+            coverage_ok = not source_is_opaque or rendered_is_opaque
             reference = originals[item["image"]]
             psnr = float(peak_signal_noise_ratio(reference, candidate, data_range=255))
             ssim = float(structural_similarity(reference, candidate, channel_axis=2, data_range=255))
             passed = (
-                item["embeddedRasterImages"] == 0
+                coverage_ok
+                and item["embeddedRasterImages"] == 0
                 and item["vectorPercent"] == 100.0
                 and item["rasterPercent"] == 0.0
                 and item["pathCount"] > 0
@@ -132,6 +138,7 @@ def main() -> int:
                 "ssim": round(ssim, 5),
                 "svgSizeMB": round(item["svgBytes"] / 1_000_000, 3),
                 "renderSeconds": round(render_seconds, 2),
+                "renderedOpaque": rendered_is_opaque,
                 "passed": passed,
             }
             final_records.append(record)
@@ -164,7 +171,7 @@ def main() -> int:
             )
         report.extend([
             "",
-            "All fixture SVGs were checked for image elements and data-image references. Every visible source pixel is assigned to an SVG path or gradient layer; palette quantization means the result is an approximation, not lossless reproduction.",
+            "All fixture SVGs were checked for image elements and data-image references. Fully opaque source images were also checked for fully opaque SVG renders so transparent contour gaps cannot pass unnoticed. Every visible source pixel is assigned to an SVG path or gradient layer; palette quantization means the result is an approximation, not lossless reproduction.",
         ])
         (RESULTS / "pure-vector-results.md").write_text("\n".join(report) + "\n", encoding="utf-8")
         print(f"\nContact sheet: {RESULTS / 'pure-vector-comparison.jpg'}")

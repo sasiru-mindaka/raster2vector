@@ -1,46 +1,97 @@
-# Vector Studio v7.2 — source audit report
+# Vector Studio v7.3.0 — Code cleanup and verification report
 
-**Audit date:** 23 November 2026  
-**Package:** Vector Studio v7.2 / application version 3.2.2
+**Audit date:** 24 November 2026  
+**Package version:** 3.3.0  
+**Review basis:** the supplied Vector Studio v7.2.3 clean-up ZIP and the user's supplied 1672 × 941 artwork.
 
-## Scope
+## Executive result
 
-The audit reviewed the 35 original textual project files (4,808 lines; this generated report is not counted) covering the HTML entry point, both stylesheets, application state and DOM handling, image import/decoding, Worker client and Worker pipeline, SVG generation/composition/validation, tracing algorithms, TypeScript GPU and security sources, generated TypeScript modules, tests, scripts, package configuration and documentation. Binary image fixtures and the archived vendor `.tgz` were not counted as source lines. Runtime imports were checked to distinguish active app/Worker modules from legacy test-only modules.
+The active browser and Worker code paths were retained. Unreferenced legacy modules, a vendor archive that was not part of the runtime dependency graph, dead diagnostic helpers, an unused local variable, and generated test-output clutter were removed. A repeatable runtime import audit was added so future shipped JavaScript modules cannot silently become orphaned without failing the test suite.
 
-## Findings fixed in this release
+No production conversion algorithm was rewritten as part of this cleanup. The aim was to reduce unused surface area while preserving the already-tested Pure Vector, Hybrid and Pixel-Exact implementations.
 
-1. **Pixel-Exact alpha export rejected by the browser validator.** Generated `fill-opacity` was not in the browser SVG attribute allowlist. Added it with numeric range validation (0–1) and Worker regression coverage.
-2. **Hybrid semi-transparent pixels could be treated as opaque gradient/vector regions.** Gradient candidate selection now excludes partial-alpha pixels, retaining them in the alpha-preserving PNG fallback. Pure Vector Photo rejects partial alpha with a clear explanation instead of silently changing opacity.
-3. **Stale conversion results could overwrite newer UI state.** Image selections and trace runs are now tokenized; the Worker uses the source bitmap snapshot taken at run start. New file selection, removal, cancellation or settings changes invalidate pending work.
-4. **Worker failures could leave work pending or affect a replacement Worker.** Added `messageerror` handling, rejection of pending work, termination of the broken Worker, and guards against late events from old Workers.
-5. **Artwork profile selector was inert.** Photo, Illustration, Poster and Logo now apply distinct hybrid tracing thresholds.
-6. **WebGL2 palette quantization had a float-boundary risk.** RGBA8 texture samples are rounded back to byte values before 6-bit palette bucketing.
-7. **WebGL2 readback failures could be missed.** Added an explicit GL error check after `readPixels` so failed readback falls back rather than silently consuming an all-zero/invalid result.
-8. **Closed-contour corner detection had a disabled backward-neighbour check.** Restored a symmetric local-maximum check to avoid duplicate corner candidates.
-9. **The development server was listening on all interfaces by default.** The supplied launcher and `npm run serve` now bind to `127.0.0.1`.
-10. **Generated test clutter could enter the project archive.** Added ignore rules for Python bytecode, OS metadata and generated test results.
+## Review method — two independent passes
 
-The v7.1 SVG namespace false-positive fix is retained: the exact standard SVG and XLink namespace declarations on the root element are accepted, while unsafe URL values and unsupported content remain rejected.
+### Pass 1: runtime reachability
+
+- Started from the two actual runtime entry points: `assets/js/app.js` and `assets/js/workers/trace-worker.js`.
+- Followed static local JavaScript imports recursively and checked that each import resolved to an existing file.
+- Checked that every JavaScript file shipped under `assets/js/` was reachable from one of those entry points.
+- Checked that every stylesheet under `assets/css/` was linked from `index.html`.
+- Result: **11 reachable JavaScript modules, 2 linked stylesheets, 0 unresolved imports, 0 orphaned runtime JavaScript files and 0 orphaned stylesheets.**
+
+### Pass 2: repository-wide reference confirmation
+
+For each removal candidate, searched the complete project (runtime code, tests, docs, package scripts and HTML) for direct and named references, then checked the runtime graph separately. Removed only the candidates that were test-only, unreferenced or generated artifacts. The same runtime graph audit is now executable as `tests/runtime-import-audit.mjs` and is part of `npm test`.
+
+## Removed dead or obsolete code
+
+| Removed item | Why it was safe to remove |
+|---|---|
+| `assets/js/core/vtrace-adapter.js` | Referenced only by its four legacy unit tests; not imported by the browser app or Worker. |
+| `assets/vendor/buzz-dee-vtrace-2.0.0-0.tgz` | No runtime import, package dependency, build step or documented install path referenced this archive. |
+| `assets/js/core/hybrid-analysis.js` | Old standalone classifier was referenced only by four unit tests; the current Worker uses the active `engine.js` + `hybrid-composer.js` path instead. |
+| `createMaskPreviewDataUrl()` in `hybrid-composer.js` | Exported diagnostic helper had no caller anywhere in the project. |
+| `tests/e2e/zoom.py` | One-off screenshot helper was not invoked by package scripts or documented test flows. |
+| `tests/results/` | Generated comparison images and metrics, not source or required fixtures; the test scripts recreate them. |
+| `const file = sourceFile` in `app.js` | The local variable was never read in `runTrace()`; `sourceFile` itself remains used by download naming and state handling. |
+
+Eight tests that exercised only the removed legacy modules were removed with those modules. The active-code unit tests remain, and the import-graph test was added. The final active-code suite contains **30 unit tests**.
+
+## Retained code and assets
+
+- `engine.js`, `lossless.js`, `hybrid-composer.js`, `svg-utils.js`, `image-utils.js` and `trace-client.js` remain in the active Worker/UI graph.
+- TypeScript GPU and Worker-payload validation sources remain in `src/`, with their compiled JavaScript retained under `assets/js/generated/` for direct browser execution.
+- Source maps and declarations remain generated development artifacts; they are associated with the active TypeScript outputs and were not mistaken for runtime modules.
+- The five local real-image fixtures remain because both the Pure Vector and Hybrid regression suites use them.
+- `tests/e2e/bench.py` remains because it is documented as an optional image-quality comparison utility.
+
+## Code and project maintenance changes
+
+- Added `tests/runtime-import-audit.mjs` and included it in `npm test`.
+- Added `npm run test:hybrid` as a named entry point for the existing real-image Hybrid regression.
+- Updated `package.json` to version `3.3.0`.
+- Rewrote the README around current application modes, actual test commands, processing limitations and project layout.
+- Removed test results and Python bytecode from the release archive; `tests/results/` remains ignored and is recreated by regression runs.
 
 ## Verification performed
 
-- `npm test`: **38/38 Node tests passed**, followed by three Worker smoke scenarios (pure-vector conversion, partial-alpha rejection in Pure Vector Photo, and Pixel-Exact alpha output).
-- `npm run test:photo`: **5/5 real-image pure-vector regressions passed**; all produced SVGs without embedded raster images.
-- `python3 tests/e2e/real-image-regression.py`: **5/5 hybrid real-image regressions passed**; the GPU-equivalent palette LUT labels matched the CPU reference.
-- `npm run build` and `npm run typecheck`: passed.
-- `node --check` over project JavaScript/ES modules and `python3 -m py_compile` over the Python test tools: passed.
-- Local HTTP server smoke test: `127.0.0.1:8000` returned HTTP 200.
-- The user-supplied 1672×941 image was sent through the actual Worker handler in CPU mode: 6.18 s, 165 paths, 101 gradients, 11.05 MB SVG, zero embedded raster images. XML parsing succeeded. Rendering the SVG back to 1672×941 produced PSNR **33.86 dB** and SSIM **0.9632** against the source image.
+### Automated tests
 
-## Tests not completed in this environment
+| Check | Result |
+|---|---|
+| `npm test` | **30/30 unit tests passed**; 3 Worker smoke scenarios passed; UI-mode regression passed; contour-gap regression passed; runtime import audit passed |
+| `npm run typecheck` | Passed |
+| JavaScript/ES module syntax checks (`node --check`) | Passed for all shipped JS/MJS files |
+| Python test script compilation (`py_compile`) | Passed |
+| `bash -n run-linux.sh` | Passed |
+| `npm run test:photo` | **5/5 real images passed**; no embedded raster images; 100% vector coverage |
+| `npm run test:hybrid` | **5/5 real images passed**; LUT-reference assignments matched CPU assignments |
 
-`npm run test:e2e` was attempted, but the managed Chromium policy blocked navigation to the local test page (`ERR_BLOCKED_BY_ADMINISTRATOR`). Therefore, this environment did **not** compile or dispatch the WGSL/WebGPU or GLSL/WebGL2 shaders on an actual browser GPU. The hybrid real-image test uses the CPU contour engine and the same quantized lookup-table reference; it is not a hardware-GPU test. Browser-driven UI race tests are also not fully exercised here. Run the documented Playwright GPU smoke test on a normal desktop browser to complete those checks.
+### User-supplied artwork
 
-## Remaining product limitations
+The supplied fully opaque **1672 × 941** PNG was processed through the actual application Worker with CPU processing selected:
 
-- Pure Vector Photo does not yet reconstruct partially transparent pixels; use Hybrid or Pixel-Exact mode when partial alpha must be preserved.
-- Pure Vector Photo is a palette/curve approximation, not lossless pixel identity; the included PSNR/SSIM checks quantify similarity, not exact equivalence.
-- GPU work is limited to per-pixel palette lookup and Sobel edge detection. Palette construction, connected-region extraction, gradient fitting, contour tracing and SVG composition remain on the CPU Worker.
-- The application enforces a 25 MB input-file limit and a 12-megapixel processing limit. Pixel-Exact mode also enforces a geometry-complexity limit.
+- Output: **259 SVG paths**, 101 reported gradient pieces.
+- Visible-pixel vector coverage: **100%**; raster coverage: **0%**.
+- Embedded SVG raster image elements: **0**.
+- SVG document: **16,000,555 bytes**; XML parsing succeeded.
+- Inkscape native-size render: **1672 × 941**, transparent pixels **0**, partial-alpha pixels **0**.
+- Inkscape 2× render: **3344 × 1882**, transparent pixels **0**, partial-alpha pixels **0**.
 
-This audit found and corrected the issues listed above, but passing the available tests is not proof that no undiscovered defects exist. The hardware GPU/browser checks remain outstanding.
+The test confirms that this particular opaque input produces a valid bitmap-free SVG that renders without transparent seam gaps at both tested scales. Pure Vector is a palette/curve approximation and is not a lossless pixel copy.
+
+### Browser GPU test limitation
+
+`npm run test:e2e` was attempted. Chromium returned `ERR_BLOCKED_BY_ADMINISTRATOR` when the test tried to navigate to the local app, so the browser UI and hardware WebGPU/WebGL2 scenarios could not be executed in this environment. No hardware-GPU PASS is claimed. The Node Worker/CPU paths, real-image raster render tests and CPU/LUT-reference equivalence tests did run successfully.
+
+## Known limitations
+
+- Pure Vector Photo currently rejects partially transparent pixels. Use Hybrid or Pixel-Exact when partial alpha must be preserved.
+- Pure Vector Photo approximates photographs with a bounded palette, vector paths and gradients; fine texture and subtle colour transitions may differ from the source.
+- Hybrid mode embeds a masked PNG for photographic detail; raster-covered areas can soften when zoomed.
+- Browser GPU behaviour remains device/driver dependent and should be checked with `npm run test:e2e` on a normal local desktop browser.
+
+## Conclusion
+
+The cleanup removed only modules/helpers verified as unused by the runtime and project reference checks. Active conversion logic and five real-image fixture sets were retained and retested. The current package passes all tests available in this environment except the browser GPU suite, which was blocked by the managed Chromium policy and is explicitly recorded as not completed.

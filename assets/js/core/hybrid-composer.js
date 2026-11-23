@@ -45,7 +45,7 @@ export async function composeHybridSvg({ vectorSvg, sourceImageData, rasterMask,
   // Raster fallback is drawn first; vector paths then cover the overlap band.
   // The PNG alpha is generated from the same segmentation grid as the vector input.
   const svg = `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
+    `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
     fallbackImage + body + '</svg>';
   return {
     svg,
@@ -56,22 +56,4 @@ export async function composeHybridSvg({ vectorSvg, sourceImageData, rasterMask,
     vectorPixels: segmentation.vectorPixels,
     rasterPixels: segmentation.rasterPixels
   };
-}
-
-/** Build an RGBA mask preview PNG as a data URL (for diagnostics only). */
-export async function createMaskPreviewDataUrl(width, height, mask) {
-  const pixels = new Uint8ClampedArray(width * height * 4);
-  for (let i = 0; i < mask.length; i++) {
-    const j = i * 4;
-    if (mask[i]) pixels.set([255, 139, 0, 180], j);
-    else pixels.set([0, 0, 0, 0], j);
-  }
-  const canvas = new OffscreenCanvas(width, height);
-  const context = canvas.getContext('2d');
-  context.putImageData(new ImageData(pixels, width, height), 0, 0);
-  const blob = await canvas.convertToBlob({ type: 'image/png' });
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return `data:image/png;base64,${btoa(binary)}`;
 }

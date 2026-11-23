@@ -11,6 +11,7 @@ const elements = {
   resultPreview: $('resultPreview'), resultEmpty: $('resultEmpty'), resultBadge: $('resultBadge'), resultInfo: $('resultInfo'),
   traceButton: $('traceButton'), cancelButton: $('cancelButton'), downloadButton: $('downloadButton'),
   modeHint: $('modeHint'), exactNote: $('exactNote'), photoNote: $('photoNote'), presetSelect: $('presetSelect'),
+  formatPill: $('formatPill'),
   colorCount: $('colorCount'), colorCountValue: $('colorCountValue'),
   curveSmoothness: $('curveSmoothness'), curveSmoothnessValue: $('curveSmoothnessValue'),
   speckleSize: $('speckleSize'), speckleSizeValue: $('speckleSizeValue'),
@@ -54,7 +55,7 @@ function updateRangeLabels() {
 }
 
 function getMode() {
-  return document.querySelector('input[name="mode"]:checked')?.value || 'hybrid';
+  return document.querySelector('input[name="mode"]:checked')?.value || 'photo';
 }
 
 function syncModeControls() {
@@ -70,12 +71,13 @@ function syncModeControls() {
     group.querySelectorAll('input,select').forEach((control) => { control.disabled = disabled; });
   });
   elements.modeHint.textContent = exact
-    ? 'Encodes decoded pixels as vector rectangles. It preserves the pixel grid, not smooth curves, and can create very large files.'
+    ? 'Every decoded pixel is encoded as vector geometry. The original pixel grid is preserved, but the SVG can become very large and will not invent extra detail.'
     : purePhoto
-      ? 'Reconstructs every visible pixel area with SVG paths and optional gradients. No raster image is embedded; photographs are palette-approximated, so files can be several megabytes.'
-      : 'Stable, flat regions become coloured SVG paths. Texture-heavy regions stay in a transparency-masked PNG layer inside the same SVG.';
+      ? 'Bitmap-free SVG: visible artwork is rebuilt from editable paths and gradients, so edges stay sharp when enlarged. Fine photographic texture is approximated.'
+      : 'Hybrid embeds a masked PNG for texture and protected details. That raster portion can look soft when enlarged; choose Pure Vector Photo for sharp scaling.';
   elements.exactNote.hidden = !exact;
   elements.photoNote.hidden = !purePhoto;
+  elements.formatPill.textContent = `SVG · ${exact ? 'PIXEL-EXACT' : purePhoto ? 'PURE VECTOR' : 'HYBRID'}`;
   elements.traceButton.querySelector('span').textContent = exact
     ? 'Generate pixel-exact SVG'
     : purePhoto ? 'Generate pure-vector photo SVG' : 'Generate hybrid SVG';
@@ -115,7 +117,7 @@ function validateSvgInBrowser(svgText, expectedWidth, expectedHeight) {
     if (!allowedElements.has(element.localName)) throw new Error(`The generated SVG contains unsupported element: ${element.localName}.`);
     for (const attribute of [...element.attributes]) {
       if (!isAllowedSvgAttribute(element.localName, attribute.name)) throw new Error(`The generated SVG contains an unsupported ${attribute.name} attribute.`);
-      if (hasUnsafeSvgAttributeValue(element, attribute, root)) throw new Error('The SVG contains an unsafe attribute value.');
+      if (hasUnsafeSvgAttributeValue(element, attribute, root)) throw new Error(`The SVG contains an unsafe attribute value in <${element.localName}>.${attribute.name}.`);
     }
     if (element.localName === 'image') {
       const href = element.getAttribute('href') || '';
@@ -221,14 +223,13 @@ function removeImage() {
   elements.cancelButton.hidden = true;
   isTracing = false;
   clearResult();
-  setStatus('Ready when you are', 'Upload an image, then generate your hybrid SVG.');
+  setStatus('Ready when you are', 'Upload an image, then generate your pure-vector SVG for sharp scaling.');
 }
 
 async function runTrace() {
   if (!sourceBitmap || !sourceFile || isTracing) return;
   const runId = ++traceRunId;
   const bitmap = sourceBitmap;
-  const file = sourceFile;
   const mode = getMode();
   isTracing = true;
   elements.traceButton.disabled = true;

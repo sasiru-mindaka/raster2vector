@@ -4,6 +4,7 @@ const EXTERNAL_REFERENCE = /(?:javascript\s*:|vbscript\s*:|data\s*:\s*text\/html
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 const XLINK_NAMESPACE = 'http://www.w3.org/1999/xlink';
+const XMLNS_NAMESPACE = 'http://www.w3.org/2000/xmlns/';
 
 const ALLOWED_SVG_ATTRIBUTES = Object.freeze({
   svg: new Set(['xmlns', 'xmlns:xlink', 'version', 'width', 'height', 'viewBox', 'shape-rendering']),
@@ -24,9 +25,20 @@ export function isAllowedSvgAttribute(elementName, attributeName) {
  * XML metadata, not resource loads, and must not be treated as unsafe URLs.
  */
 export function hasUnsafeSvgAttributeValue(element, attribute, root) {
-  const trustedNamespace = element === root && (
-    (attribute.name === 'xmlns' && attribute.value === SVG_NAMESPACE) ||
-    (attribute.name === 'xmlns:xlink' && attribute.value === XLINK_NAMESPACE)
+  // XML namespace declarations are metadata, not resource references. Browsers
+  // expose them as Attr nodes in the XMLNS namespace; checking that namespace
+  // as well as the exact name/value avoids confusing their URI with an external
+  // URL. The name/value fallback keeps this helper testable with plain objects.
+  const isRootSvg = element === root && element?.localName === 'svg' &&
+    (!element.namespaceURI || element.namespaceURI === SVG_NAMESPACE);
+  const isXmlnsAttribute = !attribute.namespaceURI || attribute.namespaceURI === XMLNS_NAMESPACE;
+  const isDefaultNamespace = attribute.name === 'xmlns' ||
+    (attribute.prefix == null && attribute.localName === 'xmlns');
+  const isXlinkNamespace = attribute.name === 'xmlns:xlink' ||
+    (attribute.prefix === 'xmlns' && attribute.localName === 'xlink');
+  const trustedNamespace = isRootSvg && isXmlnsAttribute && (
+    (isDefaultNamespace && attribute.value === SVG_NAMESPACE) ||
+    (isXlinkNamespace && attribute.value === XLINK_NAMESPACE)
   );
   if (trustedNamespace) return false;
   return /^on/i.test(attribute.name) || /javascript:|vbscript:|https?:|file:|data:text\/html/i.test(attribute.value);

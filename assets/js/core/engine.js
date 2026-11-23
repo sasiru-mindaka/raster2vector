@@ -63,6 +63,27 @@ function buildPalette(data, N, opaque, maxColors, targetPsnr, report) {
 }
 
 
+// Pick the dominant opaque colour as a vector-only fallback underlay. This is
+// used only for fully opaque photographs, so small contour-fit gaps cannot
+// reveal a white/transparent preview background.
+function estimateDominantOpaqueColour(data, opaque) {
+  const counts = new Uint32Array(NB);
+  const sumsR = new Float64Array(NB), sumsG = new Float64Array(NB), sumsB = new Float64Array(NB);
+  let best = -1, bestCount = 0;
+  for (let i = 0; i < opaque.length; i++) {
+    if (!opaque[i]) continue;
+    const r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2];
+    const k = ((r >> SHIFT) << (2 * BITS)) | ((g >> SHIFT) << BITS) | (b >> SHIFT);
+    const n = ++counts[k];
+    sumsR[k] += r; sumsG[k] += g; sumsB[k] += b;
+    if (n > bestCount) { best = k; bestCount = n; }
+  }
+  if (best < 0 || bestCount === 0) return '#000000';
+  const hex = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return '#' + hex(sumsR[best] / bestCount) + hex(sumsG[best] / bestCount) + hex(sumsB[best] / bestCount);
+}
+
+
 const MS = { 1: [[3, 0]], 2: [[0, 1]], 3: [[3, 1]], 4: [[1, 2]], 6: [[0, 2]], 7: [[3, 2]], 8: [[2, 3]], 9: [[2, 0]], 11: [[2, 1]], 12: [[1, 3]], 13: [[1, 0]], 14: [[0, 3]] };
 // Edge codes: 0 top, 1 right, 2 bottom, 3 left. Inside is always on the left of travel (holes wind the other way,
 // so fill-rule nonzero is correct and overlapping tile pieces simply union).
@@ -129,6 +150,13 @@ function simplifyClosed(p, eps) {
 const f = (v) => (Math.round(v * 10) / 10).toString();
 
 // ---- quadratic smoothing (legacy mode, `curve: "quad"`) ----
+function loopToPathLinear(p) {
+  if (p.length < 3) return '';
+  let d = `M${f(p[0][0])} ${f(p[0][1])}`;
+  for (let i = 1; i < p.length; i++) d += `L${f(p[i][0])} ${f(p[i][1])}`;
+  return d + 'Z';
+}
+
 function loopToPathQuad(p) {
   const n = p.length;
   if (n < 3) return '';
@@ -230,7 +258,7 @@ function findCorners(P) {
   return corners;
 }
 
-function loopToPathBezier(L, tol) {
+function loopToPathBezier(L, tol, smooth = true) {
   const P = [];
   for (const q of L) { const l = P[P.length - 1]; if (!l || Math.abs(l[0] - q[0]) + Math.abs(l[1] - q[1]) > 1e-3) P.push(q); }
   if (P.length > 1 && Math.abs(P[0][0] - P[P.length - 1][0]) + Math.abs(P[0][1] - P[P.length - 1][1]) < 1e-3) P.pop();
@@ -238,7 +266,7 @@ function loopToPathBezier(L, tol) {
   if (n < 3) return '';
   const cornerIdx = findCorners(P), frozen = new Set(cornerIdx);
   let Q = P;
-  for (let pass = 0; pass < 2; pass++) {
+  for (let pass = 0; pass < (smooth ? 2 : 0); pass++) {
     const R = Q.map((q, i) => (frozen.has(i) ? q : [(Q[(i + n - 1) % n][0] + 2 * q[0] + Q[(i + 1) % n][0]) / 4, (Q[(i + n - 1) % n][1] + 2 * q[1] + Q[(i + 1) % n][1]) / 4]));
     Q = R;
   }
@@ -504,7 +532,7 @@ export function traceHybridPure(img, settings, report = () => {}, prepared = nul
   // ---- contour tracing, optionally in tiles ----
   const total = pal.length + fills.length, speck = settings.speckle || 0;
   const bezier = (settings.curve || 'bezier') === 'bezier';
-  const eps = 0.06 + 0.2 * (settings.smoothness ?? 1), btol = 0.08 + 0.17 * (settings.smoothness ?? 1);
+  const eps = 0.06 + 0.2 * (settings.smoothness ?? 1), btol = pureVector ? 0.03 : (0.08 + 0.17 * (settings.smoothness ?? 1));
   let T = settings.tileSize === 'auto' || settings.tileSize === undefined ? (N > 4e6 ? 1024 : 0) : Number(settings.tileSize) || 0;
   if (T && T >= Math.max(W, H)) T = 0;
   const PAD = 2, tilesX = T ? Math.ceil(W / T) : 1, tilesY = T ? Math.ceil(H / T) : 1;
@@ -533,7 +561,7 @@ export function traceHybridPure(img, settings, report = () => {}, prepared = nul
           for (const q of lp) if ((win[0] > 0 && q[0] <= win[0] + 0.01) || (win[2] < W - 1 && q[0] >= win[2] + 0.99) || (win[1] > 0 && q[1] <= win[1] + 0.01) || (win[3] < H - 1 && q[1] >= win[3] + 0.99)) { cut = true; break; }
           if (!cut && Math.abs(area2(lp)) / 2 < speck) continue;
         }
-        dOf[k] += bezier ? loopToPathBezier(lp, btol) : loopToPathQuad(simplifyClosed(lp, eps));
+        dOf[k] += bezier ? loopToPathBezier(lp, btol, !pureVector) : (pureVector ? loopToPathLinear(lp) : loopToPathQuad(simplifyClosed(lp, eps)));
       }
     }
   }
@@ -549,9 +577,10 @@ export function traceHybridPure(img, settings, report = () => {}, prepared = nul
       if (g.solid) paint = '#' + g.solid;
       else { const id = 'g' + gradientCount++; defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${f(g.x1)}" y1="${f(g.y1)}" x2="${f(g.x2)}" y2="${f(g.y2)}"><stop offset="0" stop-color="#${g.c0}"/><stop offset="1" stop-color="#${g.c1}"/></linearGradient>`); paint = `url(#${id})`; }
     }
-    parts.push(`<path fill="${paint}" stroke="${paint}" stroke-width="0.35" stroke-linejoin="round" d="${dOf[k]}"/>`);
+    parts.push(`<path fill="${paint}" stroke="${paint}" stroke-width="${pureVector ? 0.55 : 0.35}" stroke-linejoin="round" d="${dOf[k]}"/>`);
     pathCount++;
   }
-  const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" shape-rendering="geometricPrecision">${defs.length ? `<defs>${defs.join('')}</defs>` : ''}${parts.join('')}</svg>`;
-  return { svg, pathCount, colorCount: pal.length, gradientCount, gradientPieces: fills.length, tiles: tilesX * tilesY, quantPsnr, width: W, height: H, rasterMask: rmask, vectorPixels: vecCount, rasterPixels, opCount, vectorPercent: 100 * vecCount / opCount, rasterPercent: 100 * rasterPixels / opCount, rasterUnderlayPercent: 100 * rmask.reduce((a, v) => a + v, 0) / opCount, gpuBackend, gpuEdgePixels };
+  const background = pureVector && opCount === N ? `<path fill="${estimateDominantOpaqueColour(data, opaque)}" d="M0 0H${W}V${H}H0Z"/>` : '';
+  const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" shape-rendering="geometricPrecision">${defs.length ? `<defs>${defs.join('')}</defs>` : ''}${background}${parts.join('')}</svg>`;
+  return { svg, pathCount: pathCount + (background ? 1 : 0), colorCount: pal.length, gradientCount, gradientPieces: fills.length, tiles: tilesX * tilesY, quantPsnr, width: W, height: H, rasterMask: rmask, vectorPixels: vecCount, rasterPixels, opCount, vectorPercent: 100 * vecCount / opCount, rasterPercent: 100 * rasterPixels / opCount, rasterUnderlayPercent: 100 * rmask.reduce((a, v) => a + v, 0) / opCount, gpuBackend, gpuEdgePixels };
 }

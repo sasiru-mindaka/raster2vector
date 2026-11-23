@@ -61,16 +61,16 @@
           <div class="divider"></div>
           <div class="section-head"><span>Output mode</span><span class="live-tag">CHOOSE ONE</span></div>
           <div class="mode-options" role="radiogroup" aria-label="Vectorization mode">
-            <label class="mode-card selected" id="hybridModeCard">
-              <input type="radio" name="mode" value="hybrid" checked>
+            <label class="mode-card" id="hybridModeCard">
+              <input type="radio" name="mode" value="hybrid">
               <span class="mode-icon smooth-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 18c4-11 7-11 10-5s5 5 8-7"/><circle cx="3" cy="18" r="1.5"/><circle cx="21" cy="6" r="1.5"/></svg></span>
-              <span class="mode-copy"><strong>Hybrid Vector</strong><small>Editable paths + masked detail</small></span>
-              <span class="recommended">RECOMMENDED</span>
+              <span class="mode-copy"><strong>Hybrid Vector</strong><small>Editable paths + PNG detail</small></span>
             </label>
-            <label class="mode-card" id="photoModeCard">
-              <input type="radio" name="mode" value="photo">
+            <label class="mode-card selected" id="photoModeCard">
+              <input type="radio" name="mode" value="photo" checked>
               <span class="mode-icon vector-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17.5 8.5 7l3.2 6 2.5-4 6.8 8.5H3Z"/><path d="M5 5h14v14H5z"/></svg></span>
-              <span class="mode-copy"><strong>Pure Vector Photo</strong><small>100% SVG paths · no raster layer</small></span>
+              <span class="mode-copy"><strong>Pure Vector Photo</strong><small>Bitmap-free · sharp at any zoom</small></span>
+              <span class="recommended">BEST FOR ZOOM</span>
             </label>
             <label class="mode-card" id="exactModeCard">
               <input type="radio" name="mode" value="exact">
@@ -78,7 +78,7 @@
               <span class="mode-copy"><strong>Pixel-Exact</strong><small>Exact decoded pixels · larger SVG</small></span>
             </label>
           </div>
-          <p class="field-hint" id="modeHint">Clean, stable regions become coloured SVG paths. Texture-heavy areas remain as a transparency-masked PNG layer inside the same SVG.</p>
+          <p class="field-hint" id="modeHint">Bitmap-free SVG: visible artwork is rebuilt from editable paths and gradients, so it stays sharp when enlarged. Fine photographic texture is approximated.</p>
 
           <div class="divider"></div>
           <div class="section-head"><span>Shape & colour</span><span class="section-index">02</span></div>
@@ -172,7 +172,7 @@
 
           <div class="note-card" id="photoNote" hidden>
             <span class="note-symbol">✦</span>
-            <p><strong>Pure vector:</strong> the SVG contains paths and gradients only—no embedded PNG. Photographs are represented with up to 512 palette colours, so this is a high-fidelity vector approximation, not a mathematically lossless copy. Semi-transparent pixels are not supported in this mode; use Hybrid or Pixel-Exact mode to preserve them.</p>
+            <p><strong>Sharp at any zoom:</strong> this mode exports SVG paths and gradients only—no embedded PNG/JPEG layer. Fine photographic texture is approximated with up to 512 palette colours, so the result is not a pixel-identical copy. Semi-transparent pixels are not supported; use Hybrid or Pixel-Exact mode when preserving transparency is more important than unlimited scaling.</p>
           </div>
 
           <div class="note-card" id="exactNote" hidden>
@@ -182,7 +182,7 @@
 
           <button id="traceButton" class="primary-button" type="button" disabled>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17c4-10 7-10 10-4s5 5 6-6"/><path d="M17 7h3v3"/></svg>
-            <span>Generate hybrid SVG</span>
+            <span>Generate pure-vector photo SVG</span>
           </button>
           <button id="cancelButton" class="download-button cancel-button" type="button" hidden>Cancel conversion</button>
           <button id="downloadButton" class="download-button" type="button" disabled>
@@ -196,7 +196,7 @@
           <div class="preview-toolbar">
             <div><div class="panel-kicker">LIVE WORKSPACE</div><h2>Preview & export</h2></div>
             <div class="preview-actions">
-              <span class="format-pill">SVG <span>·</span> HYBRID</span>
+              <span class="format-pill" id="formatPill">SVG · PURE VECTOR</span>
             </div>
           </div>
 
@@ -233,7 +233,7 @@
             <div class="progress-track" aria-hidden="true"><span id="traceProgress"></span></div>
           </div>
 
-          <div class="quality-note"><span class="quality-icon">✦</span><p><strong>Choose the output you need:</strong> Hybrid Vector preserves fine photographic texture with a masked raster layer. Pure Vector Photo rebuilds the whole visible image from editable SVG paths and gradients, with no embedded raster image. Pixel-Exact preserves the source pixel grid and may create very large SVG files.</p></div>
+          <div class="quality-note"><span class="quality-icon">✦</span><p><strong>Choose the output you need:</strong> Pure Vector Photo is the default for sharp scaling and contains only editable SVG paths and gradients. Hybrid Vector keeps fine photographic texture in a masked PNG layer, which can soften when zoomed. Pixel-Exact preserves the source pixel grid and may create very large SVG files.</p></div>
         </section>
       </div>
     </main>
