@@ -1,6 +1,5 @@
 {
   "name": "raster2vector",
-  "version": "7.3.0",
   "private": true,
   "type": "module",
   "description": "Browser-based image to SVG converter with Pure Vector, Hybrid and Pixel-Exact modes",

@@ -1,10 +1,9 @@
 <div align="center">
 
-# 🖼️ Raster2Vector
+# Raster2Vector
 
 ### Turn your images into scalable SVG artwork — right in your browser.
 
-[![Version](https://img.shields.io/badge/version-7.3.0-2563eb?style=for-the-badge)](#)
 [![Runs in browser](https://img.shields.io/badge/runs-in%20your%20browser-16a34a?style=for-the-badge)](#privacy-first)
 [![Python](https://img.shields.io/badge/Python-testing%20only-3776AB?style=for-the-badge&logo=python&logoColor=white)](#testing)
 [![JavaScript](https://img.shields.io/badge/JavaScript-app%20engine-F7DF1E?style=for-the-badge&logo=javascript&logoColor=111827)](#)
