@@ -9,12 +9,19 @@ function rejectAll(error) {
 
 function getWorker() {
   if (worker) return worker;
+
+  let currentWorker;
   try {
-    worker = new Worker(new URL('../workers/trace-worker.js', import.meta.url), { type: 'module', name: 'vector-studio-tracer' });
+    currentWorker = new Worker(new URL('../workers/trace-worker.js', import.meta.url), {
+      type: 'module',
+      name: 'vector-studio-tracer'
+    });
   } catch (error) {
     throw new Error(`Could not start the background tracing worker. Open this project through a local web server (see README). ${error.message}`);
   }
-  worker.addEventListener('message', (event) => {
+
+  worker = currentWorker;
+  currentWorker.addEventListener('message', (event) => {
     const data = event.data || {};
     const entry = pending.get(data.requestId);
     if (!entry) return;
@@ -28,13 +35,22 @@ function getWorker() {
       else entry.reject(new Error(data.error || 'Vectorization failed.'));
     }
   });
-  worker.addEventListener('error', (event) => {
-    const message = event.message || 'The background worker stopped unexpectedly.';
+
+  const failCurrentWorker = (message) => {
+    // Ignore late events from workers that have already been replaced.
+    if (worker !== currentWorker) return;
     rejectAll(new Error(`${message} Please reload the page and try again.`));
-    worker?.terminate();
+    currentWorker.terminate();
     worker = undefined;
+  };
+
+  currentWorker.addEventListener('error', (event) => {
+    failCurrentWorker(event.message || 'The background worker stopped unexpectedly.');
   });
-  return worker;
+  currentWorker.addEventListener('messageerror', () => {
+    failCurrentWorker('The background worker returned a message that could not be decoded.');
+  });
+  return currentWorker;
 }
 
 export function traceImage(imageData, settings, onStage = () => {}) {

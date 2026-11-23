@@ -8,11 +8,25 @@ export function validateImageFile(file) {
   if (!ACCEPTED_TYPES.has(file.type) && !extensionOkay) {
     throw new Error('Unsupported file. Choose PNG, JPG, WEBP, GIF, BMP or AVIF.');
   }
+  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected file is empty or invalid.');
   if (file.size > MAX_FILE_BYTES) throw new Error('This file is larger than 25 MB.');
+}
+
+async function validateImageSignature(file) {
+  const bytes = new Uint8Array(await file.slice(0, 32).arrayBuffer());
+  const ascii = (start, length) => String.fromCharCode(...bytes.subarray(start, start + length));
+  const png = bytes.length >= 8 && bytes[0] === 0x89 && ascii(1, 3) === 'PNG' && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  const jpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const gif = bytes.length >= 6 && (ascii(0, 6) === 'GIF87a' || ascii(0, 6) === 'GIF89a');
+  const webp = bytes.length >= 12 && ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'WEBP';
+  const bmp = bytes.length >= 2 && ascii(0, 2) === 'BM';
+  const avif = bytes.length >= 12 && ascii(4, 4) === 'ftyp' && /avif|avis/.test(ascii(8, 24));
+  if (!(png || jpeg || gif || webp || bmp || avif)) throw new Error('The selected file does not contain a supported image format.');
 }
 
 export async function decodeImageFile(file) {
   validateImageFile(file);
+  await validateImageSignature(file);
   if (typeof createImageBitmap !== 'function') throw new Error('This browser does not support safe image decoding. Please use a recent Firefox, Chrome or Edge version.');
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
   if (!bitmap.width || !bitmap.height) {
@@ -50,7 +64,7 @@ export function createImageDataForTrace(bitmap, maxDimension, exact = false) {
   return { imageData, width, height };
 }
 
-export function drawSourcePreview(bitmap, imageElement) {
+export function drawSourcePreview(bitmap) {
   const canvas = document.createElement('canvas');
   const maxDimension = 1400;
   const size = getTargetDimensions(bitmap.width, bitmap.height, maxDimension, false);
@@ -64,7 +78,6 @@ export function drawSourcePreview(bitmap, imageElement) {
     canvas.toBlob((blob) => {
       if (!blob) return reject(new Error('Could not prepare the preview image.'));
       const url = URL.createObjectURL(blob);
-      imageElement.src = url;
       resolve({ size: blob.size, url });
     }, 'image/png');
   });

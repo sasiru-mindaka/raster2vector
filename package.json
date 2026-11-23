@@ -1,11 +1,18 @@
 {
   "name": "vector-studio-hybrid",
-  "version": "3.0.0",
+  "version": "3.2.2",
   "private": true,
   "type": "module",
-  "description": "Browser-only hybrid raster-to-vector SVG studio built with HTML, CSS and vanilla JavaScript",
+  "description": "Browser-only hybrid and pure-vector photo reconstruction studio with WebGPU, WebGL2 and CPU fallback",
   "scripts": {
-    "test": "node tests/run-tests.mjs",
-    "serve": "python3 -m http.server 8000"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node tests/run-tests.mjs && node tests/worker-photo-smoke.mjs",
+    "test:e2e": "python3 tests/e2e/gpu-smoke.py",
+    "test:photo": "python3 tests/e2e/pure-vector-regression.py",
+    "serve": "python3 -m http.server 8000 --bind 127.0.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
   }
 }

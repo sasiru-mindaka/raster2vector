@@ -30,11 +30,11 @@
     <main id="top">
       <section class="hero-row">
         <div>
-          <div class="eyebrow">HYBRID VECTORIZATION ENGINE</div>
-          <h1>From pixels to <span>paths + detail.</span></h1>
-          <p class="hero-copy">Turn clean regions into editable SVG paths and preserve texture-heavy regions with a masked raster layer. Quality first, processed in your browser.</p>
+          <div class="eyebrow">BROWSER-BASED VECTOR STUDIO</div>
+          <h1>From pixels to <span>editable paths.</span></h1>
+          <p class="hero-copy">Choose hybrid artwork tracing, pure-vector photo reconstruction, or pixel-exact SVG. Images are processed locally in your browser.</p>
         </div>
-        <div class="hero-chip"><span class="chip-orb"></span> Built-in curve engine (no CDN)</div>
+        <div class="hero-chip"><span class="chip-orb"></span> GPU-assisted · Local processing</div>
       </section>
 
       <div class="workspace-grid">
@@ -67,6 +67,11 @@
               <span class="mode-copy"><strong>Hybrid Vector</strong><small>Editable paths + masked detail</small></span>
               <span class="recommended">RECOMMENDED</span>
             </label>
+            <label class="mode-card" id="photoModeCard">
+              <input type="radio" name="mode" value="photo">
+              <span class="mode-icon vector-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17.5 8.5 7l3.2 6 2.5-4 6.8 8.5H3Z"/><path d="M5 5h14v14H5z"/></svg></span>
+              <span class="mode-copy"><strong>Pure Vector Photo</strong><small>100% SVG paths · no raster layer</small></span>
+            </label>
             <label class="mode-card" id="exactModeCard">
               <input type="radio" name="mode" value="exact">
               <span class="mode-icon exact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></span>
@@ -78,7 +83,7 @@
           <div class="divider"></div>
           <div class="section-head"><span>Shape & colour</span><span class="section-index">02</span></div>
 
-          <div class="field-group" data-hybrid-control>
+          <div class="field-group" data-hybrid-control data-photo-inapplicable>
             <div class="field-label"><label for="presetSelect">Artwork profile</label></div>
             <select id="presetSelect" class="select-control">
               <option value="auto">Auto / General artwork</option>
@@ -87,12 +92,23 @@
               <option value="poster">Poster</option>
               <option value="logo">Logo / Flat artwork</option>
             </select>
-            <p class="field-hint">The profile changes how aggressively textured, photographic or flat regions are assigned to raster fallback.</p>
+            <p class="field-hint">Profiles tune colour tolerance and minimum region size: Photo keeps more fine texture in the raster fallback, while Poster and Logo favour larger clean vector regions.</p>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="gpuBackend">GPU processing</label></div>
+            <select id="gpuBackend" class="select-control">
+              <option value="auto" selected>Auto · WebGPU → WebGL2 → CPU</option>
+              <option value="webgpu">Prefer WebGPU</option>
+              <option value="webgl2">Prefer WebGL2</option>
+              <option value="cpu">CPU only</option>
+            </select>
+            <p class="field-hint">GPU accelerates per-pixel palette assignment and Sobel edge detection. Unsupported devices automatically use the CPU engine.</p>
           </div>
 
           <div class="field-group" data-hybrid-control>
             <div class="field-label"><label for="colorCount">Colour detail</label><output id="colorCountValue">48 colours</output></div>
-            <input id="colorCount" type="range" min="8" max="512" step="8" value="256">
+            <input id="colorCount" type="range" min="8" max="512" step="8" value="512">
             <div class="range-ends"><span>Fewer / lighter</span><span>More / richer</span></div>
           </div>
 
@@ -102,13 +118,13 @@
             <div class="range-ends"><span>Keep detail</span><span>Smoother edges</span></div>
           </div>
 
-          <div class="field-group" data-hybrid-control>
+          <div class="field-group" data-hybrid-control data-photo-inapplicable>
             <div class="field-label"><label for="speckleSize">Speckle cleanup</label><output id="speckleSizeValue">2 px</output></div>
             <input id="speckleSize" type="range" min="0" max="16" step="1" value="0">
             <div class="range-ends"><span>Keep texture</span><span>Remove noise</span></div>
           </div>
 
-          <div class="field-group" data-hybrid-control>
+          <div class="field-group" data-hybrid-control data-photo-inapplicable>
             <div class="field-label"><label for="detailProtection">Fidelity target</label><output id="detailProtectionValue">90%</output></div>
             <input id="detailProtection" type="range" min="0" max="100" step="5" value="90">
             <div class="range-ends"><span>More vector</span><span>Keep more texture</span></div>
@@ -121,10 +137,30 @@
             <div class="range-ends"><span>Keep small shapes</span><span>Move tiny shapes to raster</span></div>
           </div>
 
-          <div class="field-group" data-hybrid-control>
+          <div class="field-group" data-hybrid-control data-photo-inapplicable>
             <div class="field-label"><label for="edgeOverlap">Seam protection</label><output id="edgeOverlapValue">2 px</output></div>
             <input id="edgeOverlap" type="range" min="0" max="8" step="1" value="2">
             <div class="range-ends"><span>Exact boundary</span><span>More underlay overlap</span></div>
+          </div>
+
+          <div class="field-group" data-hybrid-control data-photo-inapplicable>
+            <div class="field-label"><label for="underlayMode">Raster underlay</label></div>
+            <select id="underlayMode"><option value="full" selected>Full (no seams, larger file)</option><option value="masked">Masked (smaller file)</option></select>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="curveMode">Curve fitting</label></div>
+            <select id="curveMode"><option value="bezier" selected>Cubic Bézier (smooth, compact)</option><option value="quad">Quadratic smoothing (legacy)</option></select>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="useGradients">Gradient fills</label></div>
+            <label class="check-row"><input id="useGradients" type="checkbox" checked> Fit smooth areas with real SVG gradients</label>
+          </div>
+
+          <div class="field-group" data-hybrid-control>
+            <div class="field-label"><label for="tileSize">Large-image tiles</label></div>
+            <select id="tileSize"><option value="auto" selected>Auto (tile above 4 MP)</option><option value="0">Off</option><option value="512">512 px</option><option value="1024">1024 px</option><option value="2048">2048 px</option></select>
           </div>
 
           <div class="field-group" data-hybrid-control>
@@ -132,6 +168,11 @@
             <input id="maxDimension" type="range" min="1000" max="6000" step="200" value="6000">
             <div class="range-ends"><span>Lower detail</span><span>Preserve more pixels</span></div>
             <p class="field-hint">This caps the longest working-image side. Higher values retain more source detail but need more memory and processing time.</p>
+          </div>
+
+          <div class="note-card" id="photoNote" hidden>
+            <span class="note-symbol">✦</span>
+            <p><strong>Pure vector:</strong> the SVG contains paths and gradients only—no embedded PNG. Photographs are represented with up to 512 palette colours, so this is a high-fidelity vector approximation, not a mathematically lossless copy. Semi-transparent pixels are not supported in this mode; use Hybrid or Pixel-Exact mode to preserve them.</p>
           </div>
 
           <div class="note-card" id="exactNote" hidden>
@@ -170,9 +211,9 @@
             </article>
 
             <article class="preview-card panel result-card">
-              <div class="preview-card-head"><div><span class="preview-label">02</span><h3>Hybrid result</h3></div><span class="preview-badge result-badge" id="resultBadge">Not generated</span></div>
+              <div class="preview-card-head"><div><span class="preview-label">02</span><h3>Vector result</h3></div><span class="preview-badge result-badge" id="resultBadge">Not generated</span></div>
               <div class="preview-stage checkerboard" id="resultStage">
-                <div class="empty-state" id="resultEmpty"><span class="empty-art vector-empty">⌁</span><strong>Hybrid SVG preview appears here</strong><small>Vector paths and masked raster detail will be combined</small></div>
+                <div class="empty-state" id="resultEmpty"><span class="empty-art vector-empty">⌁</span><strong>Your SVG preview appears here</strong><small>Preview the generated vector artwork</small></div>
                 <img id="resultPreview" alt="Generated SVG vector preview" hidden>
               </div>
               <div class="preview-card-foot"><span id="resultInfo">No vector output yet</span><span class="foot-state">VECTOR</span></div>
@@ -192,7 +233,7 @@
             <div class="progress-track" aria-hidden="true"><span id="traceProgress"></span></div>
           </div>
 
-          <div class="quality-note"><span class="quality-icon">✦</span><p><strong>Hybrid means both:</strong> vector-friendly shapes become editable coloured paths. Photographic texture, hair, foliage and intricate gradients are kept in an alpha-masked PNG fallback. A photograph may therefore have a high raster percentage; this is honest preservation, not a claim that every pixel became a vector.</p></div>
+          <div class="quality-note"><span class="quality-icon">✦</span><p><strong>Choose the output you need:</strong> Hybrid Vector preserves fine photographic texture with a masked raster layer. Pure Vector Photo rebuilds the whole visible image from editable SVG paths and gradients, with no embedded raster image. Pixel-Exact preserves the source pixel grid and may create very large SVG files.</p></div>
         </section>
       </div>
     </main>
