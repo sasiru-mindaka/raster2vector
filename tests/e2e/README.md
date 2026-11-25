@@ -16,7 +16,7 @@ npm run test:e2e
 
 The script also detects a system Chromium executable. It tests Auto, WebGPU-preferred, WebGL2-preferred and CPU-only Hybrid Vector paths against local image fixtures. It checks Pure Vector Photo output on the astronaut, coffee and cat images, including the requirement that no `<image>` or `data:image` raster resource is embedded. A requested GPU backend may report a CPU fallback when the host does not expose the API; the test reports the backend actually used. A managed Chromium policy that blocks navigation to local pages prevents this suite from running.
 
-For a software-only compatibility run, prefix the command with `VECTOR_STUDIO_SWIFTSHADER=1`. This is not a hardware performance test.
+For a software-only compatibility run, prefix the command with `RASTER2VECTOR_SWIFTSHADER=1`. This is not a hardware performance test.
 
 ## Pure Vector Photo real-image regression
 

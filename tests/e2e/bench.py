@@ -11,7 +11,7 @@ def run(images, configs, port=8771):
     try:
         with sync_playwright() as p:
             browser_args=['--no-sandbox','--enable-webgl','--enable-features=Vulkan,WebGPU']
-            if os.environ.get('VECTOR_STUDIO_SWIFTSHADER') == '1': browser_args += ['--enable-unsafe-swiftshader','--use-angle=swiftshader']
+            if os.environ.get('RASTER2VECTOR_SWIFTSHADER') == '1': browser_args += ['--enable-unsafe-swiftshader','--use-angle=swiftshader']
             b = p.chromium.launch(args=browser_args); 
             for img in images:
                 ref = io.imread(img)[..., :3]; H,W = ref.shape[:2]

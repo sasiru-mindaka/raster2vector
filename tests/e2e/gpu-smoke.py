@@ -56,7 +56,7 @@ def main() -> int:
                     "--enable-features=Vulkan,WebGPU",
                 ],
             }
-            if os.environ.get("VECTOR_STUDIO_SWIFTSHADER") == "1":
+            if os.environ.get("RASTER2VECTOR_SWIFTSHADER") == "1":
                 browser_options["args"].extend(["--enable-unsafe-swiftshader", "--use-angle=swiftshader"])
             system_chromium = shutil.which("chromium") or shutil.which("chromium-browser") or shutil.which("google-chrome")
             if system_chromium:
