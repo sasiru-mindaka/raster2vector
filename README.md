@@ -14,23 +14,23 @@
 
 ---
 
-## ✨ What is Raster2Vector?
+## What is Raster2Vector?
 
 Raster2Vector is a browser-based image converter. It rebuilds a picture as an SVG file, so you can open the result in vector-editing software and scale vector artwork without the usual pixel blur.
 
 Your image is processed on your own device. Raster2Vector does not need a Python server, an online conversion API, or an account to convert an image.
 
-## 🚀 Features
+## Features
 
-- 📂 Open PNG, JPG, WEBP, GIF, BMP and AVIF images.
-- 🎨 Choose between three conversion modes.
-- 🔍 Preview the original image and the SVG result.
-- ⚙️ Adjust colours, detail and conversion settings.
-- 💾 Download the result as an SVG file.
-- 🔒 Process images locally in your browser.
+- Open PNG, JPG, WEBP, GIF, BMP and AVIF images.
+- Choose between three conversion modes.
+- Preview the original image and the SVG result.
+- Adjust colours, detail and conversion settings.
+- Download the result as an SVG file.
+- Process images locally in your browser.
 
 <details>
-<summary><strong>🧩 See the three conversion modes</strong></summary>
+<summary><strong>See the three conversion modes</strong></summary>
 
 | Mode | What it does | Best for |
 |---|---|---|
@@ -42,15 +42,15 @@ Your image is processed on your own device. Raster2Vector does not need a Python
 
 </details>
 
-## ⚡ Get started
+## Get started
 
 ### What do I need?
 
 | Tool | Needed to use the app? | Why? |
 |---|---:|---|
-| 🌐 Modern web browser | **Yes** | Runs the app and converts your images. |
-| 🟢 Node.js | Only to run the included local preview server or developer tests | Starts the local web server and runs JavaScript tools. |
-| 🐍 Python 3 | **No — testing only** | Used by optional real-image and browser automation tests. It is not used by the app or its conversion features. |
+| Modern web browser | **Yes** | Runs the app and converts your images. |
+| Node.js | Only to run the included local preview server or developer tests | Starts the local web server and runs JavaScript tools. |
+| Python 3 | **No — testing only** | Used by optional real-image and browser automation tests. It is not used by the app or its conversion features. |
 
 > **Important:** Python is only for the optional test tools. You do not need Python to use Raster2Vector or convert images. When deploying to a static host such as GitHub Pages, visitors only need a modern browser.
 
@@ -90,7 +90,7 @@ Keep the terminal open while using the app. Press <kbd>Ctrl</kbd> + <kbd>C</kbd>
   <strong>Image limits:</strong> up to 25 MB and 12 megapixels.
 </blockquote>
 
-## 🧪 Testing
+## Testing
 
 Python is **only required for the Python-based tests**. It is not part of the website, image processing engine, or SVG export feature.
 
@@ -139,7 +139,7 @@ npm run test:e2e
 
 GPU test results depend on your browser, graphics drivers and hardware. The app also supports CPU fallback where available.
 
-## 📁 Project layout
+## Project layout
 
 ```text
 raster2vector/
@@ -154,17 +154,17 @@ raster2vector/
 └── run-linux.sh           Linux start script
 ```
 
-## 🔒 Privacy first
+## Privacy first
 
 - Images are opened and processed in your browser.
 - The conversion engine does not upload your picture to a conversion service.
 - You choose where to save the exported SVG.
 
-## 🤝 Contributing
+## Contributing
 
 Bug reports, ideas and improvements are welcome. Please include clear steps to reproduce a problem and, when possible, a small sample image that you are allowed to share.
 
-## 📄 License
+## License
 
 Raster2Vector is licensed under the **MIT License**. The project metadata declares the license as `MIT` in `package.json`.
 
